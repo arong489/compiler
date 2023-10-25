@@ -2,6 +2,9 @@
 
 const MyType MyType::calculate(const Token& op, const MyType& another) const
 {
+    if (this->varType == VarType::WrongType || another.varType == VarType::WrongType) {
+        return MyType(VarType::WrongType);
+    }
     MyType temp;
     switch (op.type) {
     case TKTYPE::LBRACK:
@@ -51,6 +54,9 @@ const MyType MyType::calculate(const Token& op, const MyType& another) const
 }
 const MyType MyType::calculate(const Token& op) const
 {
+    if (this->varType == VarType::WrongType) {
+        return MyType(VarType::WrongType);
+    }
     switch (op.type) {
     case TKTYPE::PLUS:
     case TKTYPE::MINUS:
@@ -66,12 +72,15 @@ const MyType MyType::calculate(const Token& op) const
 }
 int MyType::assignCheck(const MyType& another) const
 {
+    if (this->varType == VarType::WrongType || another.varType == VarType::WrongType) {
+        return 0;
+    }
     if (this->isConst) {
         // 常值不可改
         return 1;
     }
     if (this->varType != another.varType) {
-        //基础类型不匹配
+        // 基础类型不匹配
         return 2;
     }
     if (this->pointerDepth == 0 && this->degrees.size() != 0) {

@@ -8,6 +8,7 @@
 enum class VarType {
     IntType,
     VoidType,
+    WrongType,
 };
 
 struct MyType {

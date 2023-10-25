@@ -172,6 +172,7 @@ int TableManager::getVariableType(const std::string& ident, MyType& feedback)
     Table* tablePointer = this->curTable;
     std::variant<VariableInf, FunctionInf> result;
     VariableInf* tempVariableInfPtr;
+    feedback = MyType(VarType::WrongType);
     if (!tablePointer->get(ident, result)) {
         tempVariableInfPtr = std::get_if<VariableInf>(&result);
         if (tempVariableInfPtr != nullptr) {

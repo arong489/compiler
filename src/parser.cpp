@@ -1,7 +1,7 @@
 #include "../include/parser.h"
 #include "../include/exception.h"
 
-// #define parser_debug_output
+#define parser_debug_output
 
 #define _marco_string(x) #x
 #define parser_output(content) ({            \
@@ -9,13 +9,6 @@
         (*fout) << #content << std::endl;    \
     else                                     \
         (*sout) += _marco_string(content\n); \
-})
-
-#define parser_exception_handler(line, column, errorCode) ({                           \
-    if (this->sout == nullptr)                                                         \
-        this->exceptionController->handle(CompilerException(line, column, errorCode)); \
-    else                                                                               \
-        this->exceptionController->hold(CompilerException(line, column, errorCode));   \
 })
 
 bool checkFormatString(const Token& FormatString, unsigned int& paramNum)
@@ -70,11 +63,14 @@ void Parser::CompUnit()
         } else {
             // held output buffer
             this->lexer->hold(&this->outBuffer);
+            this->exceptionController->hold();
+
 #ifdef parser_debug_output
             if (this->lexer->peekToken() != TKTYPE::MAINTK) {
                 this->outBuffer += "<FuncType>\n";
             }
 #endif
+
             ident = this->lexer->nextToken();
             if (this->lexer->peekToken() == TKTYPE::LPARENT) {
 
@@ -101,19 +97,22 @@ void Parser::ConstDecl()
     //*int
     if (this->lexer->nextToken() != TKTYPE::INTTK) {
         //[wrong ConstDecl]unknown const type
-        parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+        // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+        this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
     }
 
     std::vector<int> degrees, initialValues;
     Token ident;
     MyType type = MyType(true);
-    int result;
+    MyType resultType;
+    int resultValue;
 
     do {
         //* ident
         if (this->lexer->peekToken() != TKTYPE::IDENFR) {
             //[wrong ConstDecl]wrong identifier
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
         } else
             ident = this->lexer->nextToken();
 
@@ -122,13 +121,14 @@ void Parser::ConstDecl()
         while (this->lexer->peekToken() == TKTYPE::LBRACK) {
             this->lexer->nextToken();
 
-            this->ConstExp(result);
+            this->ConstExp(resultType, resultValue);
 
-            degrees.push_back(result);
+            degrees.push_back(resultValue);
 
             if (this->lexer->peekToken() != TKTYPE::RBRACK) {
                 //[wrong ConstDecl]wrong identifier
-                parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket);
+                // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket);
+                this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket));
             } else
                 this->lexer->nextToken();
         }
@@ -142,18 +142,17 @@ void Parser::ConstDecl()
 
         } else {
             //[wrong ConstDecl]need initialize
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
         }
 
         if (!this->tableManager->insertVariable(type, ident.value, initialValues)) {
-            parser_exception_handler(ident.line, ident.column, ErrorCode::Redefine);
+            // parser_exception_handler(ident.line, ident.column, ErrorCode::Redefine);
+            this->exceptionController->handle(CompilerException(ident.line, ident.column, ErrorCode::Redefine));
         }
 
 #ifdef parser_debug_output
-        if (this->sout == nullptr)
-            (*fout) << "<ConstDef>" << std::endl;
-        else
-            (*sout) += "<ConstDef>\n";
+        parser_output(<ConstDef>);
 #endif
 
         //* ,
@@ -164,16 +163,14 @@ void Parser::ConstDecl()
     } while (true);
 
     if (this->lexer->peekToken() != TKTYPE::SEMICN) {
-        parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+        // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+        this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon));
     } else {
         this->lexer->nextToken();
     }
 
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<ConstDecl>" << std::endl;
-    else
-        (*sout) += "<ConstDecl>\n";
+    parser_output(<ConstDecl>);
 #endif
 }
 
@@ -181,25 +178,27 @@ void Parser::VarDecl(const Token& type)
 {
     Token ident;
     std::vector<int> degrees;
-    int result;
-    MyType VarType;
+    int resultValue;
+    MyType VarType, resultType;
     do {
         ident = this->lexer->nextToken();
         if (ident != TKTYPE::IDENFR) {
             //[Wrong VarDecl]need ident"
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
         }
 
         degrees.clear();
         while (this->lexer->peekToken() == TKTYPE::LBRACK) {
             this->lexer->nextToken();
 
-            this->ConstExp(result);
+            this->ConstExp(resultType, resultValue);
 
-            degrees.push_back(result);
+            degrees.push_back(resultValue);
 
             if (this->lexer->peekToken() != TKTYPE::RBRACK) {
-                parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket);
+                // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket);
+                this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket));
             } else {
                 this->lexer->nextToken();
             }
@@ -211,14 +210,12 @@ void Parser::VarDecl(const Token& type)
         }
 
         if (!this->tableManager->insertVariable(VarType, ident.value)) {
-            parser_exception_handler(ident.line, ident.column, ErrorCode::Redefine);
+            // parser_exception_handler(ident.line, ident.column, ErrorCode::Redefine);
+            this->exceptionController->handle(CompilerException(ident.line, ident.column, ErrorCode::Redefine));
         }
 
 #ifdef parser_debug_output
-        if (this->sout == nullptr)
-            (*fout) << "<VarDef>" << std::endl;
-        else
-            (*sout) += "<VarDef>\n";
+        parser_output(<VarDef>);
 #endif
 
         if (this->lexer->peekToken() == TKTYPE::COMMA)
@@ -229,20 +226,19 @@ void Parser::VarDecl(const Token& type)
 
     if (this->lexer->peekToken() != TKTYPE::SEMICN) {
         //[Wrong VarDecl]need ;
-        parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+        // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+        this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon));
     } else
         this->lexer->nextToken();
 
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<VarDecl>" << std::endl;
-    else
-        (*sout) += "<VarDecl>\n";
+    parser_output(<VarDecl>);
 #endif
 }
 
 std::vector<int> Parser::InitVal(bool constCheck)
 {
+    MyType resultType;
     std::vector<int> initialValues;
     if (this->lexer->peekToken() == TKTYPE::LBRACE) {
         this->lexer->nextToken();
@@ -261,7 +257,8 @@ std::vector<int> Parser::InitVal(bool constCheck)
             } while (true);
             if (this->lexer->peekToken() != TKTYPE::RBRACE)
                 // [Wrong InitVal]need }
-                parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+                // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+                this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
             else
                 this->lexer->nextToken();
         } else
@@ -270,9 +267,9 @@ std::vector<int> Parser::InitVal(bool constCheck)
     } else {
         int result;
         if (constCheck)
-            this->ConstExp(result);
+            this->ConstExp(resultType, result);
         else
-            this->Exp(constCheck, result);
+            this->Exp(constCheck, resultType, result);
 
         if (constCheck) {
             initialValues.push_back(result);
@@ -280,149 +277,136 @@ std::vector<int> Parser::InitVal(bool constCheck)
     }
 #ifdef parser_debug_output
     if (constCheck) {
-        if (this->sout == nullptr)
-            (*fout) << "<ConstInitVal>" << std::endl;
-        else
-            (*sout) += "<ConstInitVal>\n";
+        parser_output(<ConstInitVal>);
     } else {
-        if (this->sout == nullptr)
-            (*fout) << "<InitVal>" << std::endl;
-        else
-            (*sout) += "<InitVal>\n";
+        parser_output(<InitVal>);
     }
 #endif
     return initialValues;
 }
 
-MyType Parser::ConstExp(int& feedback)
+void Parser::ConstExp(MyType& returnType, int& returnValue)
 {
-    MyType&& ans = this->AddExp(true, feedback);
+    this->AddExp(true, returnType, returnValue);
 
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<ConstExp>" << std::endl;
-    else
-        (*sout) += "<ConstExp>\n";
+    parser_output(<ConstExp>);
 #endif
-    return ans;
 }
 
-MyType Parser::Exp(bool constCheck, int& feedback)
+void Parser::Exp(bool constCheck, MyType& returnType, int& returnValue)
 {
-    MyType&& ans = this->AddExp(constCheck, feedback);
+    this->AddExp(constCheck, returnType, returnValue);
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<Exp>" << std::endl;
-    else
-        (*sout) += "<Exp>\n";
+    parser_output(<Exp>);
 #endif
-    return ans;
 }
-MyType Parser::AddExp(bool constCheck, int& feedback)
+void Parser::AddExp(bool constCheck, MyType& returnType, int& returnValue)
 {
-    MyType&& ans = this->MulExp(constCheck, feedback);
+    this->MulExp(constCheck, returnType, returnValue);
+
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<AddExp>" << std::endl;
-    else
-        (*sout) += "<AddExp>\n";
+    parser_output(<AddExp>);
 #endif
+
     int result;
     Token tempToken;
+    MyType tempType;
     while (this->lexer->peekToken() == TKTYPE::PLUS || this->lexer->peekToken() == TKTYPE::MINUS) {
         tempToken = this->lexer->nextToken();
-        MyType&& tempType = this->MulExp(constCheck, result);
+
+        this->MulExp(constCheck, tempType, result);
 
         if (constCheck) {
-            feedback += tempToken == TKTYPE::PLUS ? +result : -result;
+            returnValue += tempToken == TKTYPE::PLUS ? +result : -result;
         }
 
         try {
-            ans = ans.calculate(tempToken, tempType);
+            returnType = returnType.calculate(tempToken, tempType);
         } catch (const ErrorCode& e) {
-            parser_exception_handler(tempToken.line, tempToken.column, e);
+            // parser_exception_handler(tempToken.line, tempToken.column, e);
+            returnType = MyType(VarType::WrongType);
+            this->exceptionController->handle(CompilerException(tempToken.line, tempToken.column, e));
         }
 
 #ifdef parser_debug_output
-        if (this->sout == nullptr)
-            (*fout) << "<AddExp>" << std::endl;
-        else
-            (*sout) += "<AddExp>\n";
+        parser_output(<AddExp>);
 #endif
     }
-    return ans;
 }
 
-MyType Parser::MulExp(bool constCheck, int& feedback)
+void Parser::MulExp(bool constCheck, MyType& returnType, int& returnValue)
 {
-    MyType&& ans = this->UnaryExp(constCheck, feedback);
+    this->UnaryExp(constCheck, returnType, returnValue);
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<MulExp>" << std::endl;
-    else
-        (*sout) += "<MulExp>\n";
+    parser_output(<MulExp>);
 #endif
     Token tempToken;
+    MyType tempType;
     int tempInt;
     while (this->lexer->peekToken() == TKTYPE::MULT || this->lexer->peekToken() == TKTYPE::DIV || this->lexer->peekToken() == TKTYPE::MOD) {
         tempToken = this->lexer->nextToken();
-        MyType&& tempType = this->UnaryExp(constCheck, tempInt);
+
+        this->UnaryExp(constCheck, tempType, tempInt);
+
         if (constCheck) {
             if (tempToken == TKTYPE::MULT) {
-                feedback *= tempInt;
+                returnValue *= tempInt;
             } else {
                 if (!tempInt) {
-                    parser_exception_handler(tempToken.line, tempToken.column, ErrorCode::OtherError);
+                    // parser_exception_handler(tempToken.line, tempToken.column, ErrorCode::OtherError);
+                    this->exceptionController->handle(CompilerException(tempToken.line, tempToken.column, ErrorCode::OtherError));
                 } else {
-                    feedback = tempToken == TKTYPE::DIV ? feedback / tempInt : feedback % tempInt;
+                    returnValue = tempToken == TKTYPE::DIV ? returnValue / tempInt : returnValue % tempInt;
                 }
             }
         }
+
         try {
-            ans = ans.calculate(tempToken, tempType);
+            returnType = returnType.calculate(tempToken, tempType);
         } catch (const ErrorCode& e) {
-            parser_exception_handler(tempToken.line, tempToken.column, e);
+            // parser_exception_handler(tempToken.line, tempToken.column, e);
+            returnType = MyType(VarType::WrongType);
+            this->exceptionController->handle(CompilerException(tempToken.line, tempToken.column, e));
         }
 
 #ifdef parser_debug_output
-        if (this->sout == nullptr)
-            (*fout) << "<MulExp>" << std::endl;
-        else
-            (*sout) += "<MulExp>\n";
+        parser_output(<MulExp>);
 #endif
     }
-    return ans;
 }
 
-MyType Parser::UnaryExp(bool constCheck, int& feedback)
+void Parser::UnaryExp(bool constCheck, MyType& returnType, int& returnValue)
 {
     Token tempToken = this->lexer->nextToken();
     int check;
-    MyType ans;
     switch (tempToken.type) {
     case TKTYPE::PLUS:
     case TKTYPE::MINUS:
     case TKTYPE::NOT:
 #ifdef parser_debug_output
-        if (this->sout == nullptr)
-            (*fout) << "<UnaryOp>" << std::endl;
-        else
-            (*sout) += "<UnaryOp>\n";
+        parser_output(<UnaryOp>);
 #endif
-        ans = this->UnaryExp(constCheck, feedback);
+        this->UnaryExp(constCheck, returnType, returnValue);
         if (constCheck)
-            feedback = tempToken == TKTYPE::MINUS ? -feedback : tempToken == TKTYPE::NOT ? !feedback
-                                                                                         : feedback;
-        ans = ans.calculate(tempToken);
+            returnValue = tempToken == TKTYPE::MINUS ? -returnValue : tempToken == TKTYPE::NOT ? !returnValue
+                                                                                               : returnValue;
+        try {
+            returnType = returnType.calculate(tempToken);
+        } catch (const ErrorCode& e) {
+            returnType = MyType(VarType::WrongType);
+            this->exceptionController->handle(CompilerException(tempToken.line, tempToken.column, e));
+        }
         break;
     case TKTYPE::LPARENT:
     case TKTYPE::INTCON:
-        ans = this->PrimaryExp(tempToken, constCheck, feedback);
+        this->PrimaryExp(tempToken, constCheck, returnType, returnValue);
         break;
     case TKTYPE::IDENFR:
         if (this->lexer->peekToken() == TKTYPE::LPARENT) {
-            if (this->tableManager->getFunctionType(tempToken.value, ans)) {
-                parser_exception_handler(tempToken.line, tempToken.column, ErrorCode::Nodefine);
+            if (this->tableManager->getFunctionType(tempToken.value, returnType)) {
+                // parser_exception_handler(tempToken.line, tempToken.column, ErrorCode::Nodefine);
+                this->exceptionController->handle(CompilerException(tempToken.line, tempToken.column, ErrorCode::Nodefine));
             }
             this->lexer->nextToken();
             if (this->lexer->peekToken() == TKTYPE::IDENFR || this->lexer->peekToken() == TKTYPE::PLUS || this->lexer->peekToken() == TKTYPE::MINUS || this->lexer->peekToken() == TKTYPE::NOT || this->lexer->peekToken() == TKTYPE::LPARENT || this->lexer->peekToken() == TKTYPE::INTCON) {
@@ -430,93 +414,88 @@ MyType Parser::UnaryExp(bool constCheck, int& feedback)
 
                 if (check = this->tableManager->checkFunctionParameters(tempToken.value, this->FuncRParams())) {
                     if (check == 1)
-                        parser_exception_handler(tempToken.line, tempToken.column, ErrorCode::WrongParameterNumber);
+                        // parser_exception_handler(tempToken.line, tempToken.column, ErrorCode::WrongParameterNumber);
+                        this->exceptionController->handle(CompilerException(tempToken.line, tempToken.column, ErrorCode::WrongParameterNumber));
                     else if (check == 2)
-                        parser_exception_handler(tempToken.line, tempToken.column, ErrorCode::WrongParameterType);
+                        // parser_exception_handler(tempToken.line, tempToken.column, ErrorCode::WrongParameterType);
+                        this->exceptionController->handle(CompilerException(tempToken.line, tempToken.column, ErrorCode::WrongParameterType));
                     else
-                        parser_exception_handler(tempToken.line, tempToken.column, ErrorCode::OtherError);
+                        // parser_exception_handler(tempToken.line, tempToken.column, ErrorCode::OtherError);
+                        this->exceptionController->handle(CompilerException(tempToken.line, tempToken.column, ErrorCode::OtherError));
                 }
             }
 
             if (this->lexer->peekToken() != TKTYPE::RPARENT)
                 //[wrong UnaryExp]need )
-                parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses);
+                // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses);
+                this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses));
             else
                 this->lexer->nextToken();
-            feedback = 0;
+            returnValue = 0;
         } else {
-            ans = this->PrimaryExp(tempToken, constCheck, feedback);
+            this->PrimaryExp(tempToken, constCheck, returnType, returnValue);
         }
         break;
     default:
         //[wrong UnaryExp]
-        parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+        // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+        this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
         break;
     }
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<UnaryExp>" << std::endl;
-    else
-        (*sout) += "<UnaryExp>\n";
+    parser_output(<UnaryExp>);
 #endif
-    return ans;
 }
 
-MyType Parser::PrimaryExp(const Token& head, bool constCheck, int& feedback)
+void Parser::PrimaryExp(const Token& head, bool constCheck, MyType& returnType, int& returnValue)
 {
-    MyType ans;
     switch (head.type) {
     case TKTYPE::LPARENT:
-        ans = this->Exp(constCheck, feedback);
+        this->Exp(constCheck, returnType, returnValue);
         if (this->lexer->peekToken() != TKTYPE::RPARENT)
             //[wrong PrimaryExp]need )
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses));
         else
             this->lexer->nextToken();
         break;
     case TKTYPE::IDENFR:
-        ans = this->LVal(head, constCheck, feedback);
+        this->LVal(head, constCheck, returnType, returnValue);
         break;
     case TKTYPE::INTCON:
         if (constCheck)
-            feedback = std::stoi(head.value);
+            returnValue = std::stoi(head.value);
 #ifdef parser_debug_output
-        if (this->sout == nullptr)
-            (*fout) << "<Number>" << std::endl;
-        else
-            (*sout) += "<Number>\n";
+        parser_output(<Number>);
 #endif
         // TODO: here
-        ans = MyType(true);
+        returnType = MyType(true);
         break;
     default:
         // [design error]
-        parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+        // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+        this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
         break;
     }
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<PrimaryExp>" << std::endl;
-    else
-        (*sout) += "<PrimaryExp>\n";
+    parser_output(<PrimaryExp>);
 #endif
-    return ans;
 }
 
 std::vector<MyType> Parser::FuncRParams()
 {
-    int result;
+    int resultValue;
     std::vector<MyType> ans;
-    ans.push_back(this->Exp(false, result));
+    MyType resultType;
+    this->Exp(false, resultType, resultValue);
+    ans.push_back(resultType);
     while (this->lexer->peekToken() == TKTYPE::COMMA) {
         this->lexer->nextToken();
-        ans.push_back(this->Exp(false, result));
+        this->Exp(false, resultType, resultValue);
+        ans.push_back(resultType);
     }
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<FuncRParams>" << std::endl;
-    else
-        (*sout) += "<FuncRParams>\n";
+    parser_output(<FuncRParams>);
 #endif
     return ans;
 }
@@ -525,12 +504,14 @@ void Parser::FuncDef(const Token& type, const Token& ident)
 {
     if (this->lexer->peekToken() != TKTYPE::LPARENT) {
         //[wrong FuncDef]need (
-        parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+        // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+        this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
     } else
         this->lexer->nextToken();
 
     if (!this->tableManager->insertFunction(MyType(type == TKTYPE::INTTK ? VarType::IntType : VarType::VoidType), ident.value)) {
-        parser_exception_handler(ident.line, ident.column, ErrorCode::Redefine);
+        // parser_exception_handler(ident.line, ident.column, ErrorCode::Redefine);
+        this->exceptionController->handle(CompilerException(ident.line, ident.column, ErrorCode::Redefine));
     }
     this->tableManager->setNextBlock(type == TKTYPE::INTTK ? BlockType::IntFunction : BlockType::VoidFunction);
 
@@ -539,13 +520,14 @@ void Parser::FuncDef(const Token& type, const Token& ident)
     Token tempToken;
     std::vector<int> degrees;
     unsigned int tempPointerDepth;
-    int result;
+    int resultValue;
     if (this->lexer->peekToken() == TKTYPE::INTTK) {
         while (this->lexer->peekToken() == TKTYPE::INTTK) {
             this->lexer->nextToken();
             if ((tempToken = this->lexer->nextToken()) != TKTYPE::IDENFR) {
                 //[wrong FuncDef]need identifier"
-                parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+                // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+                this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
             }
             tempPointerDepth = 0;
             if (this->lexer->peekToken() == TKTYPE::LBRACK) {
@@ -553,7 +535,8 @@ void Parser::FuncDef(const Token& type, const Token& ident)
                 tempPointerDepth++;
                 if (this->lexer->peekToken() != TKTYPE::RBRACK) {
                     //[wrong FuncDef]need ]
-                    parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket);
+                    // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket);
+                    this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket));
                 } else
                     this->lexer->nextToken();
             }
@@ -562,40 +545,39 @@ void Parser::FuncDef(const Token& type, const Token& ident)
             while (this->lexer->peekToken() == TKTYPE::LBRACK) {
                 this->lexer->nextToken();
 
-                this->ConstExp(result);
+                this->ConstExp(tempType, resultValue);
 
-                degrees.push_back(result);
+                degrees.push_back(resultValue);
                 if (this->lexer->peekToken() != TKTYPE::RBRACK) {
                     // [wrong FuncDef]need ]
-                    parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket);
+                    // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket);
+                    this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket));
                 } else
                     this->lexer->nextToken();
             }
+
             tempType = MyType(VarType::IntType, tempPointerDepth, degrees);
+
             if (!this->tableManager->insertVariable(tempType, tempToken.value, true)) {
-                parser_exception_handler(tempToken.line, tempToken.column, ErrorCode::Redefine);
+                // parser_exception_handler(tempToken.line, tempToken.column, ErrorCode::Redefine);
+                this->exceptionController->handle(CompilerException(tempToken.line, tempToken.column, ErrorCode::Redefine));
             }
 
 #ifdef parser_debug_output
-            if (this->sout == nullptr)
-                (*fout) << "<FuncFParam>" << std::endl;
-            else
-                (*sout) += "<FuncFParam>\n";
+            parser_output(<FuncFParam>);
 #endif
             if (this->lexer->peekToken() == TKTYPE::COMMA) {
                 this->lexer->nextToken();
             }
         }
 #ifdef parser_debug_output
-        if (this->sout == nullptr)
-            (*fout) << "<FuncFParams>" << std::endl;
-        else
-            (*sout) += "<FuncFParams>\n";
+        parser_output(<FuncFParams>);
 #endif
     }
     if (this->lexer->peekToken() != TKTYPE::RPARENT) {
         //[wrong FuncDef]need )
-        parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses);
+        // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses);
+        this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses));
     } else {
         this->lexer->nextToken();
         // this->tableManager->fixUpperFunctionParameters();
@@ -603,14 +585,17 @@ void Parser::FuncDef(const Token& type, const Token& ident)
 
     this->Block();
     if (!this->tableManager->setUpperBlock()) {
-        parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingReturnStatement);
+        // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingReturnStatement);
+        this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingReturnStatement));
     }
 
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << (ident != TKTYPE::MAINTK ? "<FuncDef>" : "<MainFuncDef>") << std::endl;
-    else
-        (*sout) += (ident != TKTYPE::MAINTK ? "<FuncDef>\n" : "<MainFuncDef>\n");
+    if (ident != TKTYPE::MAINTK) {
+        parser_output(<FuncDef>);
+    } else {
+        parser_output(<MainFuncDef>);
+    }
+
 #endif
 }
 
@@ -618,7 +603,8 @@ void Parser::Block()
 {
     if (this->lexer->nextToken() != TKTYPE::LBRACE) {
         // [wrong Block]need {
-        parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+        // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+        this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
     }
 
     //*BlockItem
@@ -637,30 +623,27 @@ void Parser::Block()
         }
     if (this->lexer->nextToken() != TKTYPE::RBRACE) {
         //[wrong Block]need }
-        parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+        // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+        this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
     }
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<Block>" << std::endl;
-    else
-        (*sout) += "<Block>\n";
+    parser_output(<Block>);
 #endif
 }
 
 void Parser::Stmt(BlockType blockType)
 {
+    MyType returnType(VarType::VoidType);
     if (this->lexer->peekToken() == TKTYPE::IFTK) {
         this->lexer->nextToken();
         this->lexer->nextToken(); //(
         this->LOrExp();
 #ifdef parser_debug_output
-        if (this->sout == nullptr)
-            (*fout) << "<Cond>" << std::endl;
-        else
-            (*sout) += "<Cond>\n";
+        parser_output(<Cond>);
 #endif
         if (this->lexer->peekToken() != TKTYPE::RPARENT)
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses));
         else
             this->lexer->nextToken(); //)
 
@@ -677,63 +660,61 @@ void Parser::Stmt(BlockType blockType)
         if (this->lexer->peekToken() != TKTYPE::SEMICN) {
             int result;
             Token ident = this->lexer->nextToken();
-            MyType&& tempType = this->LVal(ident, false, result);
-            if (tempType.isConst) {
-                parser_exception_handler(ident.line, ident.column, ErrorCode::ModifyConst);
+            this->LVal(ident, false, returnType, result);
+            if (returnType.isConst) {
+                // parser_exception_handler(ident.line, ident.column, ErrorCode::ModifyConst);
+                this->exceptionController->handle(CompilerException(ident.line, ident.column, ErrorCode::ModifyConst));
             }
             if (this->lexer->nextToken() != TKTYPE::ASSIGN) {
                 // [wrong Stmt]need =
-                parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+                // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+                this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
             }
-            this->Exp(false, result);
+            this->Exp(false, returnType, result);
 #ifdef parser_debug_output
-            if (this->sout == nullptr)
-                (*fout) << "<ForStmt>" << std::endl;
-            else
-                (*sout) += "<ForStmt>\n";
+            parser_output(<ForStmt>);
 #endif
         }
         if (this->lexer->nextToken() != TKTYPE::SEMICN) {
             // [wrong Stmt]need ;
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon));
         }
         if (this->lexer->peekToken() != TKTYPE::SEMICN) {
             this->LOrExp();
 #ifdef parser_debug_output
-            if (this->sout == nullptr)
-                (*fout) << "<Cond>" << std::endl;
-            else
-                (*sout) += "<Cond>\n";
+            parser_output(<Cond>);
 #endif
         }
 
         if (this->lexer->nextToken() != TKTYPE::SEMICN) {
             // [wrong Stmt]need ;
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon));
         }
 
         if (this->lexer->peekToken() != TKTYPE::RPARENT) {
             int result;
             Token ident = this->lexer->nextToken();
-            MyType&& tempType = this->LVal(ident, false, result);
-            if (tempType.isConst) {
-                parser_exception_handler(ident.line, ident.column, ErrorCode::ModifyConst);
+            this->LVal(ident, false, returnType, result);
+            if (returnType.isConst) {
+                // parser_exception_handler(ident.line, ident.column, ErrorCode::ModifyConst);
+                this->exceptionController->handle(CompilerException(ident.line, ident.column, ErrorCode::ModifyConst));
             }
             if (this->lexer->nextToken() != TKTYPE::ASSIGN) {
                 // [wrong Stmt]need =
-                parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+                // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+                this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
             }
-            this->Exp(false, result);
+            this->Exp(false, returnType, result);
 #ifdef parser_debug_output
-            if (this->sout == nullptr)
-                (*fout) << "<ForStmt>" << std::endl;
-            else
-                (*sout) += "<ForStmt>\n";
+            parser_output(<ForStmt>);
 #endif
         }
         if (this->lexer->peekToken() != TKTYPE::RPARENT) {
             //[wrong Stmt]need )
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses));
         } else {
             this->lexer->nextToken();
         }
@@ -743,12 +724,14 @@ void Parser::Stmt(BlockType blockType)
         || this->lexer->peekToken() == TKTYPE::CONTINUETK) {
         Token&& cbToken = this->lexer->nextToken();
         if (blockType != BlockType::Loop && !this->tableManager->inLoop()) {
-            parser_exception_handler(cbToken.line, cbToken.column, ErrorCode::BreakOrContinueOutOfLoop);
+            // parser_exception_handler(cbToken.line, cbToken.column, ErrorCode::BreakOrContinueOutOfLoop);
+            this->exceptionController->handle(CompilerException(cbToken.line, cbToken.column, ErrorCode::BreakOrContinueOutOfLoop));
         }
-        
+
         if (this->lexer->peekToken() != TKTYPE::SEMICN) {
             // [wrong Stmt]need ;
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon));
         } else
             this->lexer->nextToken();
     } else if (this->lexer->peekToken() == TKTYPE::RETURNTK) {
@@ -756,18 +739,21 @@ void Parser::Stmt(BlockType blockType)
         this->tableManager->setReturnStatement();
         int result;
         if (this->lexer->peekToken() == TKTYPE::IDENFR || this->lexer->peekToken() == TKTYPE::PLUS || this->lexer->peekToken() == TKTYPE::MINUS || this->lexer->peekToken() == TKTYPE::NOT || this->lexer->peekToken() == TKTYPE::LPARENT || this->lexer->peekToken() == TKTYPE::INTCON) {
-            this->Exp(false, result);
+            this->Exp(false, returnType, result);
             if (!this->tableManager->inIntFunction()) {
-                parser_exception_handler(returnToken.line, returnToken.column, ErrorCode::SuperfluousReturnValue);
+                // parser_exception_handler(returnToken.line, returnToken.column, ErrorCode::SuperfluousReturnValue);
+                this->exceptionController->handle(CompilerException(returnToken.line, returnToken.column, ErrorCode::SuperfluousReturnValue));
             }
         } else {
             if (!this->tableManager->inVoidFunction()) {
-                parser_exception_handler(returnToken.line, returnToken.column, ErrorCode::MissingReturnValue);
+                // parser_exception_handler(returnToken.line, returnToken.column, ErrorCode::MissingReturnValue);
+                this->exceptionController->handle(CompilerException(returnToken.line, returnToken.column, ErrorCode::MissingReturnValue));
             }
         }
         if (this->lexer->peekToken() != TKTYPE::SEMICN) {
             // [wrong Stmt]need ;
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon));
         } else {
             this->lexer->nextToken();
         }
@@ -777,16 +763,19 @@ void Parser::Stmt(BlockType blockType)
         int result;
         if (this->lexer->nextToken() != TKTYPE::LPARENT) {
             // [wrong Stmt]need (");
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
         }
         // TODO:check printf here
         unsigned int formatParamNum = 0;
         if ((tempToken = this->lexer->peekToken()) != TKTYPE::STRCON) {
             // [wrong Stmt]need format string");
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
         } else {
             if (!checkFormatString(tempToken, formatParamNum)) {
-                parser_exception_handler(tempToken.line, tempToken.column, ErrorCode::IllegalCharInFormatString);
+                // parser_exception_handler(tempToken.line, tempToken.column, ErrorCode::IllegalCharInFormatString);
+                this->exceptionController->handle(CompilerException(tempToken.line, tempToken.column, ErrorCode::IllegalCharInFormatString));
             }
             this->lexer->nextToken();
         }
@@ -794,21 +783,24 @@ void Parser::Stmt(BlockType blockType)
         while (this->lexer->peekToken() == TKTYPE::COMMA) {
             this->lexer->nextToken();
             paramNum++;
-            this->Exp(false, result);
+            this->Exp(false, returnType, result);
         }
         if (paramNum != formatParamNum) {
-            parser_exception_handler(printfToken.line, printfToken.column, ErrorCode::UnmatchedPrintArgs);
+            // parser_exception_handler(printfToken.line, printfToken.column, ErrorCode::UnmatchedPrintArgs);
+            this->exceptionController->handle(CompilerException(printfToken.line, printfToken.column, ErrorCode::UnmatchedPrintArgs));
         }
 
         if (this->lexer->peekToken() != TKTYPE::RPARENT) {
             // [wrong Stmt]need )");
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses));
         } else
             this->lexer->nextToken();
 
         if (this->lexer->peekToken() != TKTYPE::SEMICN) {
             // [wrong Stmt]need ;");
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon));
         } else
             this->lexer->nextToken();
 
@@ -818,11 +810,13 @@ void Parser::Stmt(BlockType blockType)
 
         this->sout = &this->outBuffer;
         this->lexer->hold(&this->outBuffer);
+        this->exceptionController->hold();
         int result;
         Token ident = this->lexer->nextToken();
-        MyType&& ans = this->LVal(ident, false, result);
-        if (ans.isConst) {
-            parser_exception_handler(ident.line, ident.column, ErrorCode::ModifyConst);
+        this->LVal(ident, false, returnType, result);
+        if (returnType.isConst) {
+            // parser_exception_handler(ident.line, ident.column, ErrorCode::ModifyConst);
+            this->exceptionController->handle(CompilerException(ident.line, ident.column, ErrorCode::ModifyConst));
         }
         if (this->lexer->peekToken() == TKTYPE::ASSIGN) {
 
@@ -836,24 +830,28 @@ void Parser::Stmt(BlockType blockType)
                 this->lexer->nextToken();
                 if (this->lexer->peekToken() != TKTYPE::LPARENT)
                     // [wrong FuncDef]need (");
-                    parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+                    // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::OtherError);
+                    this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::OtherError));
                 else
                     this->lexer->nextToken();
                 if (this->lexer->peekToken() != TKTYPE::RPARENT)
                     // [wrong FuncDef]need )");
-                    parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses);
+                    // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses);
+                    this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseParentheses));
                 else
                     this->lexer->nextToken();
                 if (this->lexer->peekToken() != TKTYPE::SEMICN)
                     // [wrong FuncDef]need ;");
-                    parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+                    // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+                    this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon));
                 else
                     this->lexer->nextToken();
             } else {
-                this->Exp(false, result);
+                this->Exp(false, returnType, result);
                 if (this->lexer->peekToken() != TKTYPE::SEMICN)
                     // [wrong FuncDef]need ;");
-                    parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+                    // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+                    this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon));
                 else
                     this->lexer->nextToken();
             }
@@ -863,12 +861,14 @@ void Parser::Stmt(BlockType blockType)
             this->exceptionController->discharge();
             // guess wrong
             this->sout = nullptr;
+
             int result;
-            this->Exp(false, result);
+            this->Exp(false, returnType, result);
 
             if (this->lexer->peekToken() != TKTYPE::SEMICN)
                 // [wrong FuncDef]need ;");
-                parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+                // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+                this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon));
             else
                 this->lexer->nextToken();
         }
@@ -876,80 +876,79 @@ void Parser::Stmt(BlockType blockType)
         this->tableManager->setNextBlock(blockType);
         this->Block();
         if (!this->tableManager->setUpperBlock()) {
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingReturnStatement);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingReturnStatement);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingReturnStatement));
         }
     } else {
         int result;
-        this->Exp(false, result);
+        this->Exp(false, returnType, result);
         if (this->lexer->peekToken() != TKTYPE::SEMICN)
             // [wrong FuncDef]need ;");
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingSemicolon));
         else
             this->lexer->nextToken();
     }
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<Stmt>" << std::endl;
-    else
-        (*sout) += "<Stmt>\n";
+    parser_output(<Stmt>);
 #endif
 }
 
-MyType Parser::LVal(const Token& ident, bool constCheck, int& feedback)
+void Parser::LVal(const Token& ident, bool constCheck, MyType& returnType, int& returnValue)
 {
     int result;
     std::vector<int> indexes;
-    MyType ans;
     Token tempToken;
-    if (this->tableManager->getVariableType(ident.value, ans)) {
-        parser_exception_handler(ident.line, ident.column, ErrorCode::Nodefine);
+    MyType tempType;
+    if (this->tableManager->getVariableType(ident.value, returnType)) {
+        // parser_exception_handler(ident.line, ident.column, ErrorCode::Nodefine);
+        this->exceptionController->handle(CompilerException(ident.line, ident.column, ErrorCode::Nodefine));
     }
     while (this->lexer->peekToken() == TKTYPE::LBRACK) {
         tempToken = this->lexer->nextToken();
 
-        MyType&& tempType = this->Exp(constCheck, result);
-        ans = ans.calculate(tempToken, tempType);
+        this->Exp(constCheck, tempType, result);
+
+        try {
+            returnType = returnType.calculate(tempToken, tempType);
+        } catch (const ErrorCode& e) {
+            returnType = MyType(VarType::WrongType);
+            this->exceptionController->handle(CompilerException(tempToken.line, tempToken.column, e));
+        }
+        
         if (constCheck)
             indexes.push_back(result);
 
         if (this->lexer->peekToken() != TKTYPE::RBRACK)
-            parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket);
+            // parser_exception_handler(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket);
+            this->exceptionController->handle(CompilerException(this->lexer->line, this->lexer->column, ErrorCode::MissingCloseSquareBracket));
         else
             this->lexer->nextToken(); // ]
     }
     if (constCheck) {
-        this->tableManager->getVariableValue(ident.value, feedback, indexes);
+        this->tableManager->getVariableValue(ident.value, returnValue, indexes);
     }
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<LVal>" << std::endl;
-    else
-        (*sout) += "<LVal>\n";
+    parser_output(<LVal>);
 #endif
-    return ans;
 }
 
 void Parser::RelExp()
 {
-    int result;
-    this->AddExp(false, result);
+    int returnValue;
+    MyType returnType;
+    this->AddExp(false, returnType, returnValue);
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<RelExp>" << std::endl;
-    else
-        (*sout) += "<RelExp>\n";
+    parser_output(<RelExp>);
 #endif
     while (this->lexer->peekToken() == TKTYPE::LSS
         || this->lexer->peekToken() == TKTYPE::GRE
         || this->lexer->peekToken() == TKTYPE::LEQ
         || this->lexer->peekToken() == TKTYPE::GEQ) {
         this->lexer->nextToken();
-        this->AddExp(false, result);
+        this->AddExp(false, returnType, returnValue);
 #ifdef parser_debug_output
-        if (this->sout == nullptr)
-            (*fout) << "<RelExp>" << std::endl;
-        else
-            (*sout) += "<RelExp>\n";
+        parser_output(<RelExp>);
 #endif
     }
 }
@@ -958,20 +957,14 @@ void Parser::EqExp()
 {
     this->RelExp();
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<EqExp>" << std::endl;
-    else
-        (*sout) += "<EqExp>\n";
+    parser_output(<EqExp>);
 #endif
     while (this->lexer->peekToken() == TKTYPE::EQL
         || this->lexer->peekToken() == TKTYPE::NEQ) {
         this->lexer->nextToken();
         this->RelExp();
 #ifdef parser_debug_output
-        if (this->sout == nullptr)
-            (*fout) << "<EqExp>" << std::endl;
-        else
-            (*sout) += "<EqExp>\n";
+        parser_output(<EqExp>);
 #endif
     }
 }
@@ -980,19 +973,13 @@ void Parser::LAndExp()
 {
     this->EqExp();
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<LAndExp>" << std::endl;
-    else
-        (*sout) += "<LAndExp>\n";
+    parser_output(<LAndExp>);
 #endif
     while (this->lexer->peekToken() == TKTYPE::AND) {
         this->lexer->nextToken();
         this->EqExp();
 #ifdef parser_debug_output
-        if (this->sout == nullptr)
-            (*fout) << "<LAndExp>" << std::endl;
-        else
-            (*sout) += "<LAndExp>\n";
+        parser_output(<LAndExp>);
 #endif
     }
 }
@@ -1001,19 +988,13 @@ void Parser::LOrExp()
 {
     this->LAndExp();
 #ifdef parser_debug_output
-    if (this->sout == nullptr)
-        (*fout) << "<LOrExp>" << std::endl;
-    else
-        (*sout) += "<LOrExp>\n";
+    parser_output(<LOrExp>);
 #endif
     while (this->lexer->peekToken() == TKTYPE::OR) {
         this->lexer->nextToken();
         this->LAndExp();
 #ifdef parser_debug_output
-        if (this->sout == nullptr)
-            (*fout) << "<LOrExp>" << std::endl;
-        else
-            (*sout) += "<LOrExp>\n";
+        parser_output(<LOrExp>);
 #endif
     }
 }

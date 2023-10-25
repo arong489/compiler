@@ -21,10 +21,10 @@ private:
     std::queue<Token> tokenBuffer;
     std::string* sout;
     char nextChar();
-    Token digitHeader(char);
-    Token alphaHeader(char);
-    Token signHeader(char);
-    void exceptionHandler();
+    Token digitHeader(char) noexcept;
+    Token alphaHeader(char) noexcept;
+    Token signHeader(char) noexcept;
+    void exceptionHandler(std::string&);
     int tokenLineKeeper, tokenColumnKeeper;
 
     ExceptionController *exceptionController;

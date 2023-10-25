@@ -1,4 +1,7 @@
 #include "../include/exception.h"
+
+#define exception_debug_output
+
 std::ostream& operator<<(std::ostream& fout, const CompilerException& compilerException)
 {
     // if (&fout == &std::cout)
@@ -20,18 +23,28 @@ std::string CompilerException::toString() const
 
 void ExceptionController::handle(const CompilerException& e)
 {
-    (*this->fout) << e << std::endl;
+#ifdef exception_debug_output
+    if (this->save)
+        (this->sout) += e.toString();
+    else
+        (*this->fout) << e << std::endl;
+#endif
 }
 
-void ExceptionController::hold(const CompilerException& e)
+void ExceptionController::hold()
 {
-    sout += e.toString();
+#ifdef exception_debug_output
+    this->save = true;
+#endif
 }
 
-void ExceptionController::discharge(bool check)
+void ExceptionController::discharge(bool bingo)
 {
-    if (check) {
+#ifdef exception_debug_output
+    if (bingo) {
         (*this->fout) << sout;
     }
+    this->save = false;
     sout.clear();
+#endif
 }

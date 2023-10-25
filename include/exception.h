@@ -28,7 +28,7 @@ private:
     ErrorCode type;
 
 public:
-    CompilerException(int line, int column, ErrorCode ecode)
+    CompilerException(int line, int column, const ErrorCode& ecode)
         : line(line)
         , column(column)
         , type(ecode)
@@ -42,18 +42,20 @@ class ExceptionController {
 private:
     std::ostream* fout;
     std::string sout;
+    bool save;
 
 public:
     ExceptionController(std::ostream* fout)
         : fout(fout)
         , sout()
+        , save(false)
     {
     }
     void handle(const CompilerException& e);
 
-    void hold(const CompilerException& e);
+    void hold();
 
-    void discharge(bool check = false);
+    void discharge(bool bingo = false);
 };
 
 #endif

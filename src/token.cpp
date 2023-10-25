@@ -52,7 +52,7 @@ std::ostream& operator<<(std::ostream& fout, const TKTYPE& output)
 
 bool Token::operator==(const Token& another)const
 {
-    if (this->type == TKTYPE::EOFTK || another.type == TKTYPE::EOFTK)
+    if (this->type == TKTYPE::WRONGTK || another.type == TKTYPE::WRONGTK)
     {
         return true;
     }
@@ -60,7 +60,7 @@ bool Token::operator==(const Token& another)const
 }
 bool Token::operator==(const TKTYPE& type)const
 {
-    if (this->type == TKTYPE::EOFTK || type == TKTYPE::EOFTK)
+    if (this->type == TKTYPE::WRONGTK || type == TKTYPE::WRONGTK)
     {
         return true;
     }
@@ -68,7 +68,7 @@ bool Token::operator==(const TKTYPE& type)const
 }
 bool Token::operator!=(const TKTYPE& type)const
 {
-    if (this->type == TKTYPE::EOFTK || type == TKTYPE::EOFTK)
+    if (this->type == TKTYPE::WRONGTK || type == TKTYPE::WRONGTK)
     {
         return false;
     }
@@ -76,7 +76,7 @@ bool Token::operator!=(const TKTYPE& type)const
 }
 bool Token::operator!=(const Token& another)const
 {
-    if (this->type == TKTYPE::EOFTK || another.type == TKTYPE::EOFTK)
+    if (this->type == TKTYPE::WRONGTK || another.type == TKTYPE::WRONGTK)
     {
         return true;
     }
@@ -113,7 +113,7 @@ std::string& operator+=(std::string& sout, const Token& token)
     return sout;
 }
 
-Token::Token(TKTYPE type, int line, int column, std::string value)
+Token::Token(TKTYPE type, int line, int column, const std::string& value)
     : type(type)
     , line(line)
     , column(column)

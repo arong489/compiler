@@ -82,7 +82,7 @@ enum class TKTYPE {
     // identifier
     IDENFR,
     // add reserved word here
-    EOFTK,
+    WRONGTK,
 };
 std::ostream& operator<<(std::ostream&, const TKTYPE&);
 
@@ -90,7 +90,7 @@ struct Token {
     TKTYPE type;
     int line, column;
     std::string value;
-    Token(TKTYPE, int = -1, int = -1, std::string = "");
+    Token(TKTYPE, int = -1, int = -1, const std::string& = "");
 
     Token()
         : type()

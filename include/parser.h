@@ -26,21 +26,21 @@ public:
     void ConstDecl();
     void VarDecl(const Token&);
     std::vector<int> InitVal(bool = false);
-    MyType Exp(bool, int&);
+    void Exp(bool, MyType&, int&);
     void FuncDef(const Token&, const Token&);
     std::vector<MyType> FuncRParams();
-    MyType AddExp(bool, int&);
-    MyType MulExp(bool, int&);
-    MyType UnaryExp(bool, int&);
-    MyType PrimaryExp(const Token&, bool, int&);
-    MyType LVal(const Token&, bool, int&);
+    void AddExp(bool, MyType&, int&);
+    void MulExp(bool, MyType&, int&);
+    void UnaryExp(bool, MyType&, int&);
+    void PrimaryExp(const Token&, bool, MyType&, int&);
+    void LVal(const Token&, bool, MyType&, int&);
+    void ConstExp(MyType&, int&);
     void Block();
     void Stmt(BlockType = BlockType::Normal);
     void RelExp();
     void EqExp();
     void LAndExp();
     void LOrExp();
-    MyType ConstExp(int&);
 };
 
 #endif

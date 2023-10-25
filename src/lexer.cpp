@@ -1,6 +1,6 @@
 #include "../include/lexer.h"
 #include <iostream>
-// #define lexer_debug_output
+#define lexer_debug_output
 
 std::string operatorString = ",;[]{}=()+-*/%!<>&|\"";
 
@@ -70,8 +70,10 @@ Token Lexer::signHeader(char c) noexcept
         }
         // TODO: else exception
         else {
-            this->exceptionHandler();
-            throw CompilerException(this->inner_line, this->inner_column, ErrorCode::UnknownToken);
+            value += c;
+            this->exceptionHandler(value);
+            // this->exceptionController->handle(CompilerException(this->inner_line, this->inner_column, ErrorCode::UnknownToken));
+            return Token(TKTYPE::WRONGTK, this->inner_line, this->inner_column, value);
         }
     case '|':
         if (this->fin->peek() == '|') {
@@ -81,8 +83,10 @@ Token Lexer::signHeader(char c) noexcept
         }
         // TODO: else exception
         else {
-            this->exceptionHandler();
-            throw CompilerException(this->inner_line, this->inner_column, ErrorCode::UnknownToken);
+            value += c;
+            this->exceptionHandler(value);
+            // this->exceptionController->handle(CompilerException(this->inner_line, this->inner_column, ErrorCode::UnknownToken));
+            return Token(TKTYPE::WRONGTK, this->inner_line, this->inner_column, value);
         }
     case '\"':
         while (this->fin->peek() != '\"') {
@@ -97,13 +101,14 @@ Token Lexer::signHeader(char c) noexcept
         this->inner_char_column++;
         return Token(TKTYPE::STRCON, this->inner_line, this->inner_column, value);
     default:
-        // TODO: exception
-        this->exceptionHandler();
-        throw CompilerException(this->inner_line, this->inner_column, ErrorCode::UnknownToken);
+        value += c;
+        this->exceptionHandler(value);
+        // this->exceptionController->handle(CompilerException(this->inner_line, this->inner_column, ErrorCode::UnknownToken));
+        return Token(TKTYPE::WRONGTK, this->inner_line, this->inner_column, value);
     }
     // return Token();
 }
-Token Lexer::alphaHeader(char c)
+Token Lexer::alphaHeader(char c) noexcept
 {
     std::string value;
     value += c;
@@ -162,7 +167,7 @@ Token Lexer::alphaHeader(char c)
         return Token(TKTYPE::IDENFR, this->inner_line, this->inner_column, value);
     }
 }
-Token Lexer::digitHeader(char c)
+Token Lexer::digitHeader(char c) noexcept
 {
     std::string value;
     bool exception = false;
@@ -180,8 +185,9 @@ Token Lexer::digitHeader(char c)
     }
     // TODO: if (exception) exception
     if (exception) {
-        this->exceptionHandler();
-        throw CompilerException(this->inner_line, this->inner_column, ErrorCode::UnknownToken);
+        this->exceptionHandler(value);
+        // this->exceptionController->handle(CompilerException(this->inner_line, this->inner_column, ErrorCode::UnknownToken));
+        return Token(TKTYPE::WRONGTK, this->inner_line, this->inner_column, value);
     }
     return Token(TKTYPE::INTCON, this->inner_line, this->inner_column, value);
 }
@@ -228,10 +234,11 @@ char Lexer::nextChar()
     }
     return c;
 }
-void Lexer::exceptionHandler()
+void Lexer::exceptionHandler(std::string& feedback)
 {
     char c;
     while (!isspace(c = this->fin->get())) {
+        feedback += c;
         if (isLineFeed(c)) {
             this->inner_char_line++;
             this->inner_char_column = 0;
@@ -285,6 +292,10 @@ Token Lexer::nextToken() noexcept
             (*sout) += temp, (*sout) += '\n';
 #endif
 
+        if (temp.type == TKTYPE::WRONGTK) {
+            this->exceptionController->handle(CompilerException(this->inner_line, this->inner_column, ErrorCode::UnknownToken));
+        }
+
         if (this->column == this->tokenColumnKeeper && this->line == this->line) {
             this->tokenColumnKeeper = this->tokenLineKeeper = -1;
         } else {
@@ -303,26 +314,19 @@ Token Lexer::nextToken() noexcept
         // get new Token
         this->inner_line = this->inner_char_line;
         this->inner_column = this->inner_char_column;
-        try {
-            if (operatorString.find(this->curChar) != std::string::npos)
-                this->curToken = this->signHeader(this->curChar);
-            else if (isdigit(this->curChar))
-                this->curToken = this->digitHeader(this->curChar);
-            else if (isalpha(this->curChar) || this->curChar == '_')
-                this->curToken = this->alphaHeader(this->curChar);
-            else {
-                this->exceptionHandler();
-                throw CompilerException(this->inner_line, this->inner_column, ErrorCode::UnknownToken);
-            }
-        } catch (const CompilerException& e) {
-            this->curToken = Token(TKTYPE::EOFTK, this->inner_line, this->inner_column);
-#ifdef lexer_debug_output
-            if (this->sout == nullptr)
-                exceptionController->handle(e);
-            else if (this->sout != nullptr)
-                exceptionController->hold(e);
-#endif
+        if (operatorString.find(this->curChar) != std::string::npos)
+            this->curToken = this->signHeader(this->curChar);
+        else if (isdigit(this->curChar))
+            this->curToken = this->digitHeader(this->curChar);
+        else if (isalpha(this->curChar) || this->curChar == '_')
+            this->curToken = this->alphaHeader(this->curChar);
+        else {
+            std::string value;
+            value += this->curChar;
+            this->exceptionHandler(value);
+            // this->exceptionController->handle(CompilerException(this->inner_line, this->inner_column, ErrorCode::UnknownToken));
         }
+
         // refresh end condition
         this->curChar = this->nextChar();
         this->endInput = this->curChar == -1;
@@ -334,6 +338,10 @@ Token Lexer::nextToken() noexcept
     else if (this->sout != nullptr)
         (*sout) += this->curToken, (*sout) += '\n';
 #endif
+
+    if (this->curToken.type == TKTYPE::WRONGTK) {
+        this->exceptionController->handle(CompilerException(this->inner_line, this->inner_column, ErrorCode::UnknownToken));
+    }
 
     if (this->save) {
         this->tokenBuffer.push(this->curToken);
@@ -354,26 +362,19 @@ Token Lexer::peekToken() noexcept
     if (!this->peek && !this->endInput) {
         this->inner_line = this->inner_char_line;
         this->inner_column = this->inner_char_column;
-        try {
-            if (operatorString.find(this->curChar) != std::string::npos)
-                this->curToken = this->signHeader(this->curChar);
-            else if (isdigit(this->curChar))
-                this->curToken = this->digitHeader(this->curChar);
-            else if (isalpha(this->curChar) || this->curChar == '_')
-                this->curToken = this->alphaHeader(this->curChar);
-            // TODO: else exception
-            else {
-                this->exceptionHandler();
-                throw CompilerException(this->inner_line, this->inner_column, ErrorCode::UnknownToken);
-            }
-        } catch (const CompilerException& e) {
-            this->curToken = Token(TKTYPE::EOFTK, this->inner_line, this->inner_column);
-#ifdef lexer_debug_output
-            if (this->sout == nullptr)
-                exceptionController->handle(e);
-            else if (this->sout != nullptr)
-                exceptionController->hold(e);
-#endif
+        if (operatorString.find(this->curChar) != std::string::npos)
+            this->curToken = this->signHeader(this->curChar);
+        else if (isdigit(this->curChar))
+            this->curToken = this->digitHeader(this->curChar);
+        else if (isalpha(this->curChar) || this->curChar == '_')
+            this->curToken = this->alphaHeader(this->curChar);
+        // TODO: else exception
+        else {
+            std::string value;
+            value += this->curChar;
+            this->exceptionHandler(value);
+            this->curToken = Token(TKTYPE::WRONGTK, this->inner_line, this->inner_column, value);
+            // throw CompilerException(this->inner_line, this->inner_column, ErrorCode::UnknownToken);
         }
         this->curChar = this->nextChar();
         this->peek = true;
