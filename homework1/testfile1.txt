@@ -1,0 +1,59 @@
+void putint(int out[], int len)
+{
+    if (len > 0) {
+        int i;
+        for (i = 0; i < len; i = i + 1) {
+            printf("%d ", out[i]);
+        }
+    }
+    return;
+}
+int main()
+{
+    printf("21373488\n");
+    const int c = 114514;
+    const int c1 = c, const_array[3] = {11,45,14}, const_matrix[3][3] = {{11,45,14},{19,19,810},{3,3,3}};
+    int a[3] = {1, 2, 3}, b[3][3] = {{1,2,3}, {4,5,6}, {7,8,9}};
+    int v1;
+    if (a[0] > a[1] && a[1] < a[2]) printf("test bool stmt 1\n");
+    else {
+        if (a[0] == b[0][0] && a[2] != b[2][2]) printf("test bool stmt %d\n", 2);
+    }
+
+
+    if (b[0][2] <= a[0] || b[0][2] >= a[1]) {
+        printf("test bool stmt %d\n", 3);
+    }
+
+    // printf("test Stmt");
+    ;
+    1+2;
+    v1 = c + 1919810;
+    int i;
+    for (i = 0;;){
+        i = i + 1;
+        break;
+    }
+    printf("test break and vacant for loop Ok!\n");
+    for (i = 0; i < 3; i = i + 1) {
+        if (i != 2) 
+        printf("in loop print  i = %d\n", i);
+    }
+    int stmt1 = -11;
+    int stmt2[3];
+    stmt2[0] = 4;
+    stmt2[1] = 51;
+    stmt2[2] = stmt2[0];
+    int stmt3[2][2];
+    stmt3[0][0] = -stmt1;
+    stmt3[0][1] = stmt2[2];
+    stmt3[1][0] = +stmt2[1]/10;
+    stmt3[1][1] = stmt3[0][1]-stmt1-1;
+    printf("%d = %d+%d*%d*%d+(%d-%d*%d+%d)\n",stmt1 + stmt2[0] * stmt2[1] * stmt2[2] + (stmt3[0][0]-stmt3[0][1]*stmt3[1][0]+stmt3[1][1]),stmt1,stmt2[0],stmt2[1],stmt2[2],stmt3[0][0],stmt3[0][1],stmt3[1][0],stmt3[1][1]);
+    int input_digit[4];
+    input_digit[0] = getint();
+    input_digit[1] = getint();
+    input_digit[2] = getint();
+    printf("%d = %d / (%d mod %d)\n", input_digit[0] / (input_digit[1] % input_digit[2]), input_digit[0], input_digit[1], input_digit[2]);
+    return 0;
+}

@@ -1,0 +1,8 @@
+21373488
+test bool stmt 2
+test bool stmt 3
+test break and vacant for loop Ok!
+in loop print  i = 0
+in loop print  i = 1
+810 = -11+4*51*4+(11-4*5+14)
+382 = 114514 / (1919 mod 810)

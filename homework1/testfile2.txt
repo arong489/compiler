@@ -1,0 +1,42 @@
+int test_funcDef_three(int a, int b, int c){
+    {}
+    return c;
+}
+
+void test_funcDef_one(int a[][3]){
+    test_funcDef_three(a[0][0], a[0][1], a[0][2]);
+    return ;
+}
+
+int test_funcDef(){
+    int a[3][3];
+    test_funcDef_one(a);
+    printf("\nfucdef test Ok\n");
+    return 1;
+}
+
+int main(){
+    
+    printf("%d", 21373488);
+    test_funcDef();
+    int i;
+    int times;
+    for (i = 0; i < 5;) {
+        i = i + 1;
+        if (i == 2) continue;
+        times = times + 1;
+    }
+    for (i = 0; ; i = i + 1) {
+        if (i > 5) break;
+    }
+    for (; i > 0;){
+        i = i - 1;
+    }
+    for (; ; i = i + 1){
+        if (i > 4) break;
+    }
+    for(;;){
+        break;
+    }
+    return 0;
+}
