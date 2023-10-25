@@ -2,6 +2,7 @@
 
 #define exception_debug_output
 
+
 std::ostream& operator<<(std::ostream& fout, const CompilerException& compilerException)
 {
     // if (&fout == &std::cout)
