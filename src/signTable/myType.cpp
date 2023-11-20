@@ -1,4 +1,4 @@
-#include "../include/myType.h"
+#include "../../include/signTable/myType.h"
 
 const MyType MyType::calculate(const Token& op, const MyType& another) const
 {

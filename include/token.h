@@ -107,6 +107,7 @@ struct Token {
     bool operator!=(const Token&)const;
     friend std::string& operator+=(std::string&, const Token&);
     unsigned int worldLength() const;
+    std::string toString() const;
 };
 
 #endif

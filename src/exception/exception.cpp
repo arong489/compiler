@@ -1,8 +1,9 @@
-#include "../include/exception.h"
+#include "../../include/exception/exception.h"
 
 #define exception_debug_output
 
 std::string ErrorCodeString[] = {
+    "None",
     "IllegalCharInFormatString",
     "Redefine",
     "Nodefine",

@@ -12,3 +12,7 @@
 /sysy_explanation.md
 /testfile.txt
 /thinking.md
+*.ll
+.gitignore
+llvm_ir.txt
+env.txt

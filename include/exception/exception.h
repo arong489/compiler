@@ -3,6 +3,7 @@
 #include <iostream>
 
 enum class ErrorCode {
+    None,
     IllegalCharInFormatString,
     Redefine,
     Nodefine,

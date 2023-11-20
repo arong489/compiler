@@ -2,7 +2,7 @@
 #define _LEXER
 #define CONTENT_SIZE 100
 
-#include "exception.h"
+#include "./exception/exception.h"
 #include "token.h"
 #include <fstream>
 #include <queue>

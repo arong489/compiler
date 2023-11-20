@@ -1,6 +1,6 @@
 #include "../include/lexer.h"
 #include <iostream>
-#define lexer_debug_output
+// #define lexer_debug_output
 
 std::string operatorString = ",;[]{}=()+-*/%!<>&|\"";
 

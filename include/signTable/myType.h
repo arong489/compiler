@@ -1,8 +1,8 @@
 #ifndef TYPE_H
 #define TYPE_H
 
-#include "exception.h"
-#include "token.h"
+#include "../exception/exception.h"
+#include "../token.h"
 
 #include <vector>
 enum class VarType {

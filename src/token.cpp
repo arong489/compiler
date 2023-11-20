@@ -125,3 +125,13 @@ unsigned int Token::worldLength() const
 {
     return this->value.empty() ? TKTYPEORISTR[static_cast<int>(this->type)].length() : this->value.length();
 }
+
+std::string Token::toString() const
+{
+    std::string ret_string;
+    if (this->value.empty() || this->type == TKTYPE::INTCON || this->type == TKTYPE::STRCON)
+        return TKTYPEORISTR[static_cast<int>(this->type)];
+    else {
+        return this->value;
+    }
+}
