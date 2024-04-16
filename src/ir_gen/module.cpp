@@ -9,18 +9,22 @@ bool Module::delcareFunction(const std::string& func_name, const VarType& ret_ty
     }
 
     std::string fix_func_name = "@" + func_name;
-
+    bool ret_bool = true;
     auto&& ite1 = this->global_var_infs.find(fix_func_name);
     if (ite1 != this->global_var_infs.end()) {
-        return false;
+        ret_bool = false;
     }
     auto&& ite2 = this->functions.find(fix_func_name);
     if (ite2 != this->functions.end()) {
-        return false;
+        ret_bool = false;
     }
-    this->functions.insert({ fix_func_name, Function(this->global_var_infs, this->functions, fix_func_name, ret_type, this->fout) });
-    this->cur_function = & this->functions.at(fix_func_name);
-    return true;
+    if (ret_bool){
+        this->functions.insert({ fix_func_name, Function(this->global_var_infs, this->functions, fix_func_name, ret_type, this->fout) });
+        this->cur_function = & this->functions.at(fix_func_name);
+    } else {
+        this->cur_function = new Function(this->global_var_infs, this->functions, fix_func_name, ret_type, this->fout);
+    }
+    return ret_bool;
 }
 bool Module::getFuction(const std::string& func_name, Function* ret_function)
 {
@@ -89,6 +93,8 @@ bool Module::declareVariable(const std::string& var_name, const VarType& var_typ
 VarInf Module::getVariableRegister(bool left_value_tag, const std::string& var_name, const std::vector<VarInf>& reg_or_num_indexes, ErrorCode* error_code)
 {
 
+    if (error_code) *error_code = ErrorCode::None;
+
     if (this->pre_read_mode) {
         return {VarType::CONSTANT, "0"};
     }
@@ -97,7 +103,6 @@ VarInf Module::getVariableRegister(bool left_value_tag, const std::string& var_n
         return this->cur_function->getVariableRegister(left_value_tag, var_name, reg_or_num_indexes, error_code);
     }
 
-    if (error_code) *error_code = ErrorCode::None;
 
     // when get var in global
     if (var_name.empty()) {

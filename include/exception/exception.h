@@ -46,6 +46,7 @@ private:
     bool save;
 
 public:
+    bool correct = true;
     ExceptionController(std::ostream* fout)
         : fout(fout)
         , sout()

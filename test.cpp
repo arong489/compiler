@@ -20,6 +20,7 @@ int main()
     Module* ir_module = new Module(&iout);
     Parser parser = *new Parser(lexer, &fout, ir_module, exceptionController);
     parser.CompUnit();
-    ir_module->print();
+    if (exceptionController->correct)
+        ir_module->print();
     return 0;
 }

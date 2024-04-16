@@ -20,11 +20,16 @@ struct LlvmIR {
         ICMP_SLT,
         ICMP_SGE,
         ICMP_SLE,
+        ICMP_UGT,
+        ICMP_ULT,
+        ICMP_UGE,
+        ICMP_ULE,
         LOAD,
         STORE,
         ALLOCA,
         GETELEMENTPTR,
         CALL,
+        EXT,
     } action;
     virtual std::string toString() const = 0;
     virtual ~LlvmIR() { } // 占位, 防止析构不彻底
@@ -182,6 +187,29 @@ struct CallIR : virtual LlvmIR {
     LlvmIR* copy_alloca() const
     {
         return new CallIR(*this);
+    }
+    std::string toString() const;
+};
+
+// 抽象llvm有符号拓展指令
+struct ExtIR : virtual LlvmIR {
+    std::string result_reg;
+    VarType result_type;
+    std::string src_reg;
+    VarType src_type;
+    bool sign;
+    ExtIR(const std::string& result_reg, LlvmIR::Action action, const VarType& src_type, const std::string& src_reg, const VarType& result_type, bool sign = false)
+        : result_reg(result_reg)
+        , result_type(result_type)
+        , src_reg(src_reg)
+        , src_type(src_type)
+        , sign(sign)
+    {
+        this->action = action;
+    }
+    LlvmIR* copy_alloca() const
+    {
+        return new ExtIR(*this);
     }
     std::string toString() const;
 };

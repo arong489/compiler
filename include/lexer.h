@@ -34,7 +34,9 @@ public:
     // if stop at current token
     Token nextToken() noexcept;
     Token peekToken() noexcept;
+    // 建立缓冲
     void hold(std::string* sout);
+    // 释放缓冲
     void discharge(bool = false);
     bool endInput;
     int line, column;

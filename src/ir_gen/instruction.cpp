@@ -18,6 +18,10 @@ std::string CalculateIR::toString() const
     case LlvmIR::ICMP_SLT:  ans += "icmp slt ";break;
     case LlvmIR::ICMP_SGE:  ans += "icmp sge ";break;
     case LlvmIR::ICMP_SLE:  ans += "icmp sle ";break;
+    case LlvmIR::ICMP_UGT:  ans += "icmp ugt ";break;
+    case LlvmIR::ICMP_ULT:  ans += "icmp ult ";break;
+    case LlvmIR::ICMP_UGE:  ans += "icmp uge ";break;
+    case LlvmIR::ICMP_ULE:  ans += "icmp ule ";break;
     default: throw -1;
     }
     ans += cal_type.toString() + ' ' + reg_or_num1 + ", " + reg_or_num2;
@@ -96,3 +100,8 @@ std::string CallIR::toString() const
     return ans;
 }
 
+std::string ExtIR::toString() const
+{
+    std::string ans = result_reg + (this->sign ? " = sext " : " = zext ") + src_type.toString() + " " + src_reg + " to " + result_type.toString();
+    return ans;
+}

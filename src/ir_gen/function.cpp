@@ -48,7 +48,7 @@ bool Function::declareParam(const std::string& var_name, const VarType& var_type
     this->type.paramsType.push_back(var_type);
     this->reg_map.insert({ reg, var_type });
 
-    return this->declareVariable(var_name, var_type, {var_type, reg});
+    return this->declareVariable(var_name, var_type, { var_type, reg });
 }
 
 // declare an array with initial values
@@ -56,7 +56,7 @@ bool Function::declareParam(const std::string& var_name, const VarType& var_type
 bool Function::declareVariable(const std::string& var_name, const VarType& var_type, const std::vector<VarInf>& initial_value)
 {
     if (var_type.array_degrees.size() == 0) {
-        return this->declareVariable(var_name, var_type, initial_value.empty() ? VarInf{VarType::VOID} : initial_value.front());
+        return this->declareVariable(var_name, var_type, initial_value.empty() ? VarInf { VarType::VOID } : initial_value.front());
     }
     VarType&& array_type = var_type.getVisit(-1, nullptr);
     std::string fix_var_name;
@@ -74,12 +74,11 @@ bool Function::declareVariable(const std::string& var_name, const VarType& var_t
     }
 
     if (this->cur_block != this->entry_block)
-    // if not constant
+        // if not constant
         this->entry_block->insertAlloca(AllocaIR(LlvmIR::ALLOCA, fix_var_name, var_type));
-    else{
+    else {
         this->cur_block->addIR(AllocaIR(LlvmIR::ALLOCA, fix_var_name, var_type));
     }
-
 
     if (initial_value.empty()) {
         return check;
@@ -88,7 +87,7 @@ bool Function::declareVariable(const std::string& var_name, const VarType& var_t
     // Note: initial array
     unsigned int offset = 0;
     std::vector<unsigned int> indexes(var_type.array_degrees.size());
-    std::vector<VarInf> str_indexes(indexes.size() + 1, {VarType(VarType::i32), "0"});
+    std::vector<VarInf> str_indexes(indexes.size() + 1, { VarType(VarType::i32), "0" });
     std::string reg;
 
     VarType&& gep_reg_type = VarType(var_type.type, var_type.pointer_depth + 1);
@@ -102,7 +101,7 @@ bool Function::declareVariable(const std::string& var_name, const VarType& var_t
         this->reg_map.insert({ reg, gep_reg_type });
 
         this->cur_block->addIR(GetElementIR(reg, LlvmIR::GETELEMENTPTR, array_type, fix_var_name, str_indexes));
-        //Note:
+        // Note:
         this->cur_block->addIR(StorageIR(LlvmIR::STORE, gep_reg_type, reg, initial_value[offset].type, initial_value[offset].name));
 
         indexes[i]++;
@@ -131,16 +130,14 @@ bool Function::declareVariable(const std::string& var_name, const VarType& var_t
     // store the value in global
     if (var_type.is_const) {
         fix_var_name = this->func_name + '.' + fix_var_name.erase(0, 1);
-        this->global_var_map.insert({ fix_var_name, { var_type_pointer, {initial_reg_or_num}}});
+        this->global_var_map.insert({ fix_var_name, { var_type_pointer, { initial_reg_or_num } } });
         return check;
     }
-
 
     if (this->entry_block != this->cur_block)
         this->entry_block->insertAlloca(AllocaIR(LlvmIR::ALLOCA, fix_var_name, var_type));
     else
         this->cur_block->addIR(AllocaIR(LlvmIR::ALLOCA, fix_var_name, var_type));
-
 
     if (initial_reg_or_num.type != VarType::VOID) {
         this->cur_block->addIR(StorageIR(LlvmIR::STORE, var_type_pointer, fix_var_name, initial_reg_or_num.type, initial_reg_or_num.name));
@@ -155,7 +152,7 @@ VarInf Function::getVariableRegister(bool left_value_tag, const std::string& var
     if (var_name.empty()) {
         if (error_code)
             *error_code = ErrorCode::OtherError;
-        return VarInf{VarType::WRONG, ""};
+        return VarInf { VarType::WRONG, "" };
     }
 
     // get variable address register
@@ -165,7 +162,7 @@ VarInf Function::getVariableRegister(bool left_value_tag, const std::string& var
         *error_code = ErrorCode::None;
     // is const
     if (ret_var_type.type == VarType::CONSTANT) {
-        return VarInf{ret_var_type, var_name};
+        return VarInf { ret_var_type, var_name };
     }
     // check global var
     bool global_var = false;
@@ -174,7 +171,7 @@ VarInf Function::getVariableRegister(bool left_value_tag, const std::string& var
         if (ite == this->global_var_map.end()) {
             if (error_code)
                 *error_code = ErrorCode::Nodefine;
-            return VarInf{VarType::WRONG, ""};
+            return VarInf { VarType::WRONG, "" };
         } else {
             ret_var_type = (*ite).second.type;
             fix_var_name = '@' + var_name;
@@ -190,7 +187,7 @@ VarInf Function::getVariableRegister(bool left_value_tag, const std::string& var
 
         if (var_inf.type.getVisit(reg_or_num_indexes.size(), error_code).pointer_depth == 1) {
             if (reg_or_num_indexes.empty()) {
-                //Note: add other constant type here
+                // Note: add other constant type here
                 return var_inf.initial_values.front();
             } else {
                 std::vector<unsigned int> indexes = { 0 };
@@ -206,7 +203,7 @@ VarInf Function::getVariableRegister(bool left_value_tag, const std::string& var
                 }
                 if (check_const) {
                     var_inf.getVisit(indexes, &fix_var_name, error_code);
-                    return VarInf{VarType(), fix_var_name};
+                    return VarInf { VarType(), fix_var_name };
                 }
             }
         }
@@ -214,30 +211,30 @@ VarInf Function::getVariableRegister(bool left_value_tag, const std::string& var
 
     // handle address
     if (left_value_tag && reg_or_num_indexes.empty()) {
-        return VarInf{ret_var_type, fix_var_name};
+        return VarInf { ret_var_type, fix_var_name };
     }
     ErrorCode check_bound;
     VarType&& cal_type = ret_var_type.getVisit(reg_or_num_indexes.size() + 1, &check_bound);
     if (check_bound != ErrorCode::None) {
         if (error_code)
             *error_code = check_bound;
-        return VarInf{VarType(VarType::WRONG), ""};
+        return VarInf { VarType(VarType::WRONG), "" };
     }
 
     std::string reg;
     std::vector<VarInf> indexes = reg_or_num_indexes;
     if (ret_var_type.needLoadFirst()) {
         reg = "%reg" + std::to_string(this->total_reg_quantity++);
-        VarType && temp_type = ret_var_type.getVisit(1, nullptr);
-        this->reg_map.insert({reg, temp_type});
+        VarType&& temp_type = ret_var_type.getVisit(1, nullptr);
+        this->reg_map.insert({ reg, temp_type });
         this->cur_block->addIR(StorageIR(LlvmIR::LOAD, ret_var_type, fix_var_name, temp_type, reg));
         fix_var_name = reg;
         ret_var_type = temp_type;
     } else if (!ret_var_type.array_degrees.empty()) {
-        indexes.emplace(indexes.begin(), VarInf{VarType::i32, "0"});
+        indexes.emplace(indexes.begin(), VarInf { VarType::i32, "0" });
     }
     if (cal_type.needEndZero()) {
-        indexes.push_back(VarInf{VarType::i32, "0"});
+        indexes.push_back(VarInf { VarType::i32, "0" });
         cal_type.toPointer();
     }
 
@@ -246,27 +243,28 @@ VarInf Function::getVariableRegister(bool left_value_tag, const std::string& var
         this->cur_block->addIR(GetElementIR(reg, LlvmIR::GETELEMENTPTR, ret_var_type, fix_var_name, indexes));
         ret_var_type = ret_var_type.getVisit(indexes.size() - 1, nullptr);
         ret_var_type.toPointer();
-        this->reg_map.insert({reg, ret_var_type});
+        this->reg_map.insert({ reg, ret_var_type });
         fix_var_name = reg;
     }
 
     if (!left_value_tag && cal_type.pointer_depth == 0 && cal_type.array_pointer_depth == 0 && cal_type.array_degrees.empty()) {
         reg = "%reg" + std::to_string(this->total_reg_quantity++);
-        VarType && temp_type = ret_var_type.getVisit(1, nullptr);
-        this->reg_map.insert({reg, cal_type});
+        VarType&& temp_type = ret_var_type.getVisit(1, nullptr);
+        this->reg_map.insert({ reg, cal_type });
         this->cur_block->addIR(StorageIR(LlvmIR::LOAD, ret_var_type, fix_var_name, temp_type, reg));
         ret_var_type = temp_type;
     }
 
-    return VarInf{ret_var_type, reg};
+    return VarInf { ret_var_type, reg };
 }
 
 VarInf Function::calculate(const std::string& action, const VarInf& reg_or_num1, const VarInf& reg_or_num2, ErrorCode* error_code)
 {
     if (reg_or_num1.type == VarType::WRONG || reg_or_num2.type == VarType::WRONG) {
         // Note: check this
-        if (error_code) *error_code = ErrorCode::OtherError;
-        return VarInf{VarType::WRONG};
+        if (error_code)
+            *error_code = ErrorCode::None;
+        return VarInf { VarType::WRONG };
     }
 
     // initial
@@ -284,9 +282,8 @@ VarInf Function::calculate(const std::string& action, const VarInf& reg_or_num1,
         } else {
             this->cur_block->addIR(StorageIR(LlvmIR::STORE, reg_or_num1.type, reg_or_num1.name, reg_or_num2.type, reg_or_num2.name));
         }
-        return VarInf{VarType::VOID};
+        return VarInf { VarType::VOID };
     }
-
 
     bool is_num1, is_num2;
     int value1, value2;
@@ -294,6 +291,8 @@ VarInf Function::calculate(const std::string& action, const VarInf& reg_or_num1,
     is_num2 = Util::stringToInt(reg_or_num2.name, value2);
     VarType var_type1 = reg_or_num1.type;
     VarType var_type2 = reg_or_num2.type;
+    std::string var_name1 = reg_or_num1.name;
+    std::string var_name2 = reg_or_num2.name;
 
     // select ir_action
     LlvmIR::Action ir_action;
@@ -330,18 +329,50 @@ VarInf Function::calculate(const std::string& action, const VarInf& reg_or_num1,
         ir_action = LlvmIR::OR;
     }
 
-    // error check
-
+    // error check and calculate transform
     if (var_type1 != var_type2) {
-        if (error_code)
-            *error_code = ErrorCode::CalculateTypeNotMatch;
-        return VarInf{VarType::WRONG};
+        if ((var_type1 == VarType::i32 || var_type1 == VarType::i8 || var_type1 == VarType::i1) && (var_type2 == VarType::i32 || var_type2 == VarType::i8 || var_type2 == VarType::i1)) {
+            std::string temp_reg = "%reg" + std::to_string(this->total_reg_quantity++);
+            if (var_type1.type > var_type2.type) {
+                this->cur_block->addIR(ExtIR(temp_reg, LlvmIR::EXT, var_type2, var_name2, var_type1));
+                var_name2 = temp_reg;
+                var_type2 = var_type1;
+            } else {
+                this->cur_block->addIR(ExtIR(temp_reg, LlvmIR::EXT, var_type1, var_name1, var_type2));
+                var_name1 = temp_reg;
+                var_type1 = var_type2;
+            }
+        } else {
+            if (error_code)
+                *error_code = ErrorCode::CalculateTypeNotMatch;
+            return VarInf { VarType::WRONG };
+        }
     }
     std::string ret_reg;
     // handle ir
     if (!is_num1 || !is_num2) {
         ret_reg = "%reg" + std::to_string(this->total_reg_quantity++);
-        this->cur_block->addIR(CalculateIR(ret_reg, ir_action, is_num1 ? var_type2 : var_type1, reg_or_num1.name, reg_or_num2.name));
+
+        if ((is_num1 ? var_type2 : var_type1) == VarType::i1) {
+            switch (ir_action)
+            {
+            case LlvmIR::ICMP_SGE:
+                ir_action = LlvmIR::ICMP_UGE;
+                break;
+            case LlvmIR::ICMP_SGT:
+                ir_action = LlvmIR::ICMP_UGT;
+                break;
+            case LlvmIR::ICMP_SLE:
+                ir_action = LlvmIR::ICMP_ULE;
+                break;
+            case LlvmIR::ICMP_SLT:
+                ir_action = LlvmIR::ICMP_ULT;
+            default:
+                break;
+            }
+        }
+
+        this->cur_block->addIR(CalculateIR(ret_reg, ir_action, is_num1 ? var_type2 : var_type1, var_name1, var_name2));
     }
     // return value directly
     switch (ir_action) {
@@ -394,6 +425,7 @@ VarInf Function::calculate(const std::string& action, const VarInf& reg_or_num1,
             this->reg_map.insert({ ret_reg, VarType(VarType::i1) });
         }
         break;
+    case LlvmIR::ICMP_UGT:
     case LlvmIR::ICMP_SGT:
         if (is_num1 && is_num2) {
             ret_reg = std::to_string(value1 > value2);
@@ -401,6 +433,7 @@ VarInf Function::calculate(const std::string& action, const VarInf& reg_or_num1,
             this->reg_map.insert({ ret_reg, VarType(VarType::i1) });
         }
         break;
+    case LlvmIR::ICMP_ULT:
     case LlvmIR::ICMP_SLT:
         if (is_num1 && is_num2) {
             ret_reg = std::to_string(value1 < value2);
@@ -408,6 +441,7 @@ VarInf Function::calculate(const std::string& action, const VarInf& reg_or_num1,
             this->reg_map.insert({ ret_reg, VarType(VarType::i1) });
         }
         break;
+    case LlvmIR::ICMP_ULE:
     case LlvmIR::ICMP_SLE:
         if (is_num1 && is_num2) {
             ret_reg = std::to_string(value1 <= value2);
@@ -415,6 +449,7 @@ VarInf Function::calculate(const std::string& action, const VarInf& reg_or_num1,
             this->reg_map.insert({ ret_reg, VarType(VarType::i1) });
         }
         break;
+    case LlvmIR::ICMP_UGE:
     case LlvmIR::ICMP_SGE:
         if (is_num1 && is_num2) {
             ret_reg = std::to_string(value1 >= value2);
@@ -440,7 +475,7 @@ VarInf Function::calculate(const std::string& action, const VarInf& reg_or_num1,
         break;
     }
 
-    return {is_num1 && is_num2 ? VarType::CONSTANT : this->reg_map.at(ret_reg), ret_reg};
+    return { is_num1 && is_num2 ? VarType::CONSTANT : this->reg_map.at(ret_reg), ret_reg };
 }
 
 VarInf Function::callFunction(const std::string& func_name, const std::vector<VarInf>& params, ErrorCode* error_code)
@@ -449,7 +484,7 @@ VarInf Function::callFunction(const std::string& func_name, const std::vector<Va
     if (ite == this->function_map.end()) {
         if (error_code)
             *error_code = ErrorCode::Nodefine;
-        return {VarType::WRONG};
+        return { VarType::WRONG };
     }
     if (error_code)
         *error_code = ErrorCode::None;
@@ -457,26 +492,25 @@ VarInf Function::callFunction(const std::string& func_name, const std::vector<Va
     if (params.size() != callee.type.paramsType.size()) {
         if (error_code)
             *error_code = ErrorCode::WrongParameterNumber;
+        return { VarType::WRONG };
     }
     bool is_num;
     for (unsigned int i = 0; i < params.size(); i++) {
         if (params[i].type != callee.type.paramsType[i]) {
             if (error_code)
                 *error_code = ErrorCode::WrongParameterType;
-            return {VarType::WRONG};
+            return { VarType::WRONG };
         }
     }
     if (callee.type.retType.type != VarType::VOID) {
         std::string reg = "%reg" + std::to_string(this->total_reg_quantity++);
         this->reg_map.insert({ reg, callee.type.retType });
         this->cur_block->addIR(CallIR(reg, LlvmIR::CALL, callee.type, callee.func_name, params));
-        return {callee.type.retType, reg};
+        return { callee.type.retType, reg };
     } else {
         this->cur_block->addIR(CallIR(LlvmIR::CALL, callee.type, callee.func_name, params));
-        return {VarType::VOID};
+        return { VarType::VOID };
     }
-
-
 }
 
 void Function::setNextBasicBlock(const std::string& name, BasicBlock::Type type)
@@ -526,7 +560,6 @@ void Function::setBranchStatement(const VarInf& condition, const std::string& la
     std::string&& fix_label1 = BasicBlock::fixLabelName(label1, block_type1);
     std::string&& fix_label2 = BasicBlock::fixLabelName(label2, block_type2);
 
-
     this->cur_block->addIR(BranchIR(LlvmIR::BR, condition.name, '%' + fix_label1, '%' + fix_label2));
     this->need_ret = false;
 }
@@ -547,52 +580,58 @@ VarInf Function::callThirdPartyFunction(const std::string& func_name, const std:
         if (!params.empty()) {
             if (error_code)
                 *error_code = ErrorCode::WrongParameterNumber;
-            return {VarType::WRONG};
+            return { VarType::WRONG };
         } else {
             std::string reg = "%reg" + std::to_string(this->total_reg_quantity++);
             this->reg_map.insert({ reg, VarType(VarType::i32) });
-            this->cur_block->addIR(CallIR(reg, LlvmIR::CALL, FunctionType{VarType::i32, {}}, func_name, {}));
-            return {VarType::i32, reg};
+            this->cur_block->addIR(CallIR(reg, LlvmIR::CALL, FunctionType { VarType::i32, {} }, func_name, {}));
+            return { VarType::i32, reg };
         }
     } else if (func_name.compare("@putint") == 0) {
         if (params.size() != 1) {
-            if (error_code) *error_code = ErrorCode::WrongParameterNumber;
-            return {VarType::WRONG};
-        } else if (params.front().type != VarType::i32){
-            if (error_code) *error_code = ErrorCode::WrongParameterType;
-            return {VarType::WRONG};
+            if (error_code)
+                *error_code = ErrorCode::WrongParameterNumber;
+            return { VarType::WRONG };
+        } else if (params.front().type != VarType::i32) {
+            if (error_code)
+                *error_code = ErrorCode::WrongParameterType;
+            return { VarType::WRONG };
         } else {
-            this->cur_block->addIR(CallIR(LlvmIR::CALL, {VarType::VOID, {VarType::i32}}, func_name, params));
-            return {VarType::VOID};
+            this->cur_block->addIR(CallIR(LlvmIR::CALL, { VarType::VOID, { VarType::i32 } }, func_name, params));
+            return { VarType::VOID };
         }
     } else if (func_name.compare("@putstr") == 0) {
         if (params.size() != 1) {
-            if (error_code) *error_code = ErrorCode::WrongParameterNumber;
-            return {VarType::WRONG};
-        } else if (params.front().type != VarType::i8){
-            if (error_code) *error_code = ErrorCode::WrongParameterType;
-            return {VarType::WRONG};
+            if (error_code)
+                *error_code = ErrorCode::WrongParameterNumber;
+            return { VarType::WRONG };
+        } else if (params.front().type != VarType::i8) {
+            if (error_code)
+                *error_code = ErrorCode::WrongParameterType;
+            return { VarType::WRONG };
         } else {
-            this->cur_block->addIR(CallIR(LlvmIR::CALL, {VarType::VOID, {VarType::i32}}, func_name, params));
-            return {VarType::VOID};
+            this->cur_block->addIR(CallIR(LlvmIR::CALL, { VarType::VOID, { VarType::i32 } }, func_name, params));
+            return { VarType::VOID };
         }
     } else if (func_name.compare("@putch") == 0) {
         if (params.size() != 1) {
-            if (error_code) *error_code = ErrorCode::WrongParameterNumber;
-            return {VarType::WRONG};
-        } else if (params.front().type != VarType::i32){
-            if (error_code) *error_code = ErrorCode::WrongParameterType;
-            return {VarType::WRONG};
+            if (error_code)
+                *error_code = ErrorCode::WrongParameterNumber;
+            return { VarType::WRONG };
+        } else if (params.front().type != VarType::i32) {
+            if (error_code)
+                *error_code = ErrorCode::WrongParameterType;
+            return { VarType::WRONG };
         } else {
-            this->cur_block->addIR(CallIR(LlvmIR::CALL, {VarType::VOID, {VarType::i32}}, func_name, params));
-            return {VarType::VOID};
+            this->cur_block->addIR(CallIR(LlvmIR::CALL, { VarType::VOID, { VarType::i32 } }, func_name, params));
+            return { VarType::VOID };
         }
     } else {
         if (error_code)
             *error_code = ErrorCode::Nodefine;
     }
 
-    return {VarType::WRONG};
+    return { VarType::WRONG };
 }
 
 void Function::setPrintfStatement(const std::string& format_string, const std::vector<VarInf>& params, ErrorCode* error_code)
@@ -622,7 +661,13 @@ void Function::setPrintfStatement(const std::string& format_string, const std::v
             i++;
             if (*i == 'd') {
                 i++;
-                if (this->callThirdPartyFunction("@putint", {params[num++]}, error_code).type == VarType::WRONG) {
+                if (params.size() <= num) {
+                    if (error_code) {
+                        *error_code = ErrorCode::UnmatchedPrintArgs;
+                    }
+                    return;
+                }
+                if (this->callThirdPartyFunction("@putint", { params[num++] }, error_code).type == VarType::WRONG) {
                     return;
                 }
             } else {
@@ -639,7 +684,7 @@ void Function::setPrintfStatement(const std::string& format_string, const std::v
             if (*i == 'n') {
                 // initial_str_value.name += "\\0A";
                 // length++;
-                if (this->callThirdPartyFunction("@putch", {VarInf{VarType::i32, std::to_string(10)}}, error_code).type == VarType::WRONG) {
+                if (this->callThirdPartyFunction("@putch", { VarInf { VarType::i32, std::to_string(10) } }, error_code).type == VarType::WRONG) {
                     return;
                 }
                 i++;
@@ -654,7 +699,7 @@ void Function::setPrintfStatement(const std::string& format_string, const std::v
             }
         } else if (*i == ' ' || *i == '!' || (*i >= 40 && *i <= 126)) {
             // initial_str_value.name += *i;
-            if (this->callThirdPartyFunction("@putch", {VarInf{VarType::i32, std::to_string((int)(*i))}}, error_code).type == VarType::WRONG) {
+            if (this->callThirdPartyFunction("@putch", { VarInf { VarType::i32, std::to_string((int)(*i)) } }, error_code).type == VarType::WRONG) {
                 return;
             }
             i++;
@@ -678,7 +723,7 @@ void Function::setPrintfStatement(const std::string& format_string, const std::v
     // }
     if (num != params.size()) {
         if (error_code) {
-            *error_code = ErrorCode::WrongParameterNumber;
+            *error_code = ErrorCode::UnmatchedPrintArgs;
         }
         return;
     }
@@ -692,7 +737,7 @@ void Function::print()
     unsigned int num = 0;
     if (!this->type.paramsType.empty()) {
         (*this->fout) << this->type.paramsType[0].toString() << " %reg" << num;
-        num ++;
+        num++;
         for (unsigned int i = 1; i < this->type.paramsType.size(); i++, num++) {
             (*this->fout) << ", " << this->type.paramsType[i].toString() << " %reg" << num;
         }
